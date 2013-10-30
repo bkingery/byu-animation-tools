@@ -373,30 +373,34 @@ def writeToAlembic(outDir, filename, rootObject, objects='*', trange='off', star
     abcROP.destroy()
 
     return abcFilePath
+
+def writeCameraToAlembic(sequence, parentNode, c):
+    name = c.name()
+    shot = name.split('_')[1]
+    camDir = os.path.join(os.environ['SHOTS_DIR'], sequence+shot, 'camera')
+    abcName = sequence+shot+'_camera'+'.abc'
+    sFrame, eFrame = hou.playbar.playbackRange()
+    sSize = hou.playbar.frameIncrement()
+    abcFilePath = writeToAlembic(camDir, abcName, parentNode
+                                , objects=os.path.join(c.path(), 'cam1')
+                                , trange='normal'
+                                , startFrame=sFrame
+                                , endFrame=eFrame
+                                , stepSize=sSize)
+    mayaFilePath = os.path.join(camDir, sequence+shot+'_camera'+'.mb')
+    if os.path.exists(mayaFilePath):
+        os.remove(mayaFilePath)
+    amu.mayaImportAlembicFile(mayaFilePath, abcFilePath)
+    print hou.node(os.path.join(c.path(),'cam1')).evalParm('focal')
+    amu.setFocalLengthMaya(mayaFilePath, hou.node(os.path.join(c.path(),'cam1')).evalParm('focal'))
+
     
 def writeCamerasToAlembic(node):
     sequence = node.name().split('_')[2][0]
     children = node.children()
     for c in children:
-        name = c.name()
-        if 'shot' in name:
-            shot = name.split('_')[1]
-            camDir = os.path.join(os.environ['SHOTS_DIR'], sequence+shot, 'camera')
-            abcName = sequence+shot+'_camera'+'.abc'
-            sFrame, eFrame = hou.playbar.playbackRange()
-            sSize = hou.playbar.frameIncrement()
-            abcFilePath = writeToAlembic(camDir, abcName, node
-                                        , objects=os.path.join(c.path(), 'cam1')
-                                        , trange='normal'
-                                        # , startFrame=sFrame
-                                        # , endFrame=eFrame
-                                        , stepSize=sSize)
-            mayaFilePath = os.path.join(camDir, sequence+shot+'_camera'+'.mb')
-            if os.path.exists(mayaFilePath):
-                os.remove(mayaFilePath)
-            amu.mayaImportAlembicFile(mayaFilePath, abcFilePath)
-            print hou.node(os.path.join(c.path(),'cam1')).evalParm('focal')
-            amu.setFocalLengthMaya(mayaFilePath, hou.node(os.path.join(c.path(),'cam1')).evalParm('focal'))
+        if 'shot' in c.name():
+            writeCameraToAlembic(sequence, node, c)
             
 
 def writeSetToAlembic(node):
